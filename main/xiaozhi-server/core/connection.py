@@ -484,6 +484,14 @@ class ConnectionHandler:
             asyncio.run_coroutine_threadsafe(
                 self.tts.open_audio_channels(self), self.loop
             )
+            # 预生成唤醒词回复缓存（mimo_v25 优先）
+            try:
+                from core.handle.helloHandle import wakeupWordsResponse
+                asyncio.run_coroutine_threadsafe(
+                    wakeupWordsResponse(self), self.loop
+                )
+            except Exception as e:
+                self.logger.bind(tag=TAG).warning(f"预生成唤醒词回复失败: {e}")
             if self.need_bind:
                 self.bind_completed_event.set()
                 return

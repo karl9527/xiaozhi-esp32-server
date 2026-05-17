@@ -125,6 +125,8 @@ class WakeupWordsConfig:
             # 生成voice的哈希值
             voice_hash = hashlib.md5(voice.encode()).hexdigest()
             file_path = os.path.join(self.assets_dir, f"{voice_hash}.wav")
+            # 统一使用正斜杠，避免跨平台路径问题
+            file_path = file_path.replace("\\", "/")
 
             # 如果文件已存在，先删除
             if os.path.exists(file_path):
