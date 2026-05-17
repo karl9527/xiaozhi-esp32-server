@@ -52,14 +52,20 @@ def lang_tag_filter(text: str) -> dict | str:
     # 移除所有 <|...|> 格式的标签，获取纯文本
     clean_text = re.sub(tag_pattern, "", text).strip()
 
-    # 如果没有标签，直接返回纯文本
-    if not all_tags:
+    # 过滤掉模型内部特殊 token（如 SPECIAL_TOKEN_19、unk 等）
+    valid_tags = [
+        tag for tag in all_tags
+        if not tag.startswith("SPECIAL_TOKEN") and not tag.startswith("unk")
+    ]
+
+    # 如果没有有效标签，直接返回纯文本
+    if not valid_tags:
         return clean_text
 
     # 按照 FunASR 的固定顺序提取标签，返回 dict
-    language = all_tags[0] if len(all_tags) > 0 else "zh"
-    emotion = all_tags[1] if len(all_tags) > 1 else "NEUTRAL"
-    # event = all_tags[2] if len(all_tags) > 2 else "Speech"  # 事件标签暂不使用
+    language = valid_tags[0] if len(valid_tags) > 0 else "zh"
+    emotion = valid_tags[1] if len(valid_tags) > 1 else "NEUTRAL"
+    # event = valid_tags[2] if len(valid_tags) > 2 else "Speech"  # 事件标签暂不使用
 
     result = {
         "content": clean_text,

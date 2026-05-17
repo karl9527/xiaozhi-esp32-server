@@ -328,11 +328,14 @@ def audio_bytes_to_data_stream(
     audio_bytes, file_type, is_opus, callback: Callable[[Any], Any], sample_rate=16000, opus_encoder=None
 ) -> None:
     """
-    直接用音频二进制数据转为opus/pcm数据，支持wav、mp3、p3
+    直接用音频二进制数据转为opus/pcm数据，支持wav、mp3、p3、pcm/pcm16
     """
     if file_type == "p3":
         # 直接用p3解码
         return p3.decode_opus_from_bytes_stream(audio_bytes, callback)
+    elif file_type in ("pcm", "pcm16"):
+        # PCM 原始数据直接处理，无需 pydub/ffmpeg
+        pcm_to_data_stream(audio_bytes, is_opus, callback, sample_rate, opus_encoder)
     else:
         # 其他格式用pydub
         audio = AudioSegment.from_file(

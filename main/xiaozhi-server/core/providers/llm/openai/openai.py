@@ -160,11 +160,22 @@ class LLMProvider(LLMProviderBase):
 
         stream = self.client.chat.completions.create(**request_params)
 
+        is_active = True
         try:
             for chunk in stream:
                 if getattr(chunk, "choices", None):
                     delta = chunk.choices[0].delta
                     content = getattr(delta, "content", "")
+                    # 处理 <think> 标签：跳过思考过程内容
+                    if content:
+                        if "<think>" in content:
+                            is_active = False
+                            content = content.split("<think>")[0]
+                        if "</think>" in content:
+                            is_active = True
+                            content = content.split("</think>")[-1]
+                        if not is_active:
+                            content = ""
                     tool_calls = getattr(delta, "tool_calls", None)
                     yield content, tool_calls
                 elif isinstance(getattr(chunk, "usage", None), CompletionUsage):

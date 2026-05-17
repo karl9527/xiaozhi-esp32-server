@@ -994,6 +994,19 @@ TTS:
     #     weight: 1
     # language_boost: auto
     # language: "中文"  # 指定输出语种,如:中文、英语、日语、韩语等,请根据所选音色支持的语言进行设置,不填则默认为中文
+  MinimaxTTS:
+    # MiniMax 官方 TTS 接口（/v1/t2a_v2），Token Plan 直接使用
+    # 开通地址：https://platform.minimaxi.com/
+    type: minimax
+    output_dir: tmp/
+    api_key: 你的minimax token plan api key
+    # host 可选，国内用户保持默认 api.minimaxi.com，海外用户改为 api.minimax.io
+    # host: api.minimax.io
+    model: speech-02-turbo
+    voice_id: female-shaonv
+    format: mp3
+    speed: 1.0
+    # language: "中文"  # 指定输出语种,如:中文、英语、日语、韩语等,请根据所选音色支持的语言进行设置,不填则默认为中文
   AliyunTTS:
     # 阿里云智能语音交互服务，需要先在阿里云平台开通服务，然后获取验证信息
     # 平台地址：https://nls-portal.console.aliyun.com/

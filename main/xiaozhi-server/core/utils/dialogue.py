@@ -104,8 +104,6 @@ class Dialogue:
 
         if system_message:
             # 以 <context> 为分界点，拆分静态 system prompt 和动态上下文
-            # 静态部分（规则、身份等）保持不变，可命中前缀缓存
-            # 动态部分（时间、天气、记忆等）作为第二条 system 消息，保持 system 权威性
             full_prompt = system_message.content
             context_match = re.search(r"<context>", full_prompt)
             if context_match:
@@ -115,8 +113,49 @@ class Dialogue:
                 static_part = full_prompt
                 dynamic_part = ""
 
-            # 第一段：静态 system prompt（前缀缓存可命中）
-            dialogue.append({"role": "system", "content": static_part})
+            # 合并静态和动态为一条 system 消息
+            # 某些 API/中转站不支持多条 system 消息，合并可避免报错
+            combined_system = static_part
+
+            # 填充动态上下文
+            if dynamic_part:
+                # 替换时间占位符
+                dynamic_part = dynamic_part.replace(
+                    "{{current_time}}", datetime.now().strftime("%H:%M")
+                )
+
+                # 填充记忆
+                if memory_str is not None:
+                    dynamic_part = re.sub(
+                        r"<memory>.*?</memory>",
+                        f"<memory>\n{memory_str}\n</memory>",
+                        dynamic_part,
+                        flags=re.DOTALL,
+                    )
+
+                # 追加说话人信息
+                try:
+                    speakers = voiceprint_config.get("speakers", [])
+                    if speakers:
+                        dynamic_part += "\n<speakers_info>"
+                        for speaker_str in speakers:
+                            try:
+                                parts = speaker_str.split(",", 2)
+                                if len(parts) >= 2:
+                                    name = parts[1].strip()
+                                    description = (
+                                        parts[2].strip() if len(parts) >= 3 else ""
+                                    )
+                                    dynamic_part += f"\n- {name}：{description}"
+                            except:
+                                pass
+                        dynamic_part += "\n</speakers_info>"
+                except:
+                    pass
+
+                combined_system += dynamic_part
+
+            dialogue.append({"role": "system", "content": combined_system})
 
         # 第二段：few-shot 示例（会话内不变，也是缓存前缀的一部分）
         non_system_messages = [m for m in self.dialogue if m.role != "system"]
@@ -124,45 +163,6 @@ class Dialogue:
         complete_fewshot = self._ensure_tool_calls_complete(fewshot_messages)
         for m in complete_fewshot:
             self.getMessages(m, dialogue)
-
-        # 第三段：动态上下文 system prompt（时间、记忆、说话人等）
-        # 保持 system 角色以确保模型权威性，不降级为 user
-        if system_message and dynamic_part:
-            # 替换时间占位符
-            dynamic_part = dynamic_part.replace(
-                "{{current_time}}", datetime.now().strftime("%H:%M")
-            )
-
-            # 填充记忆
-            if memory_str is not None:
-                dynamic_part = re.sub(
-                    r"<memory>.*?</memory>",
-                    f"<memory>\n{memory_str}\n</memory>",
-                    dynamic_part,
-                    flags=re.DOTALL,
-                )
-
-            # 追加说话人信息
-            try:
-                speakers = voiceprint_config.get("speakers", [])
-                if speakers:
-                    dynamic_part += "\n<speakers_info>"
-                    for speaker_str in speakers:
-                        try:
-                            parts = speaker_str.split(",", 2)
-                            if len(parts) >= 2:
-                                name = parts[1].strip()
-                                description = (
-                                    parts[2].strip() if len(parts) >= 3 else ""
-                                )
-                                dynamic_part += f"\n- {name}：{description}"
-                        except:
-                            pass
-                    dynamic_part += "\n</speakers_info>"
-            except:
-                pass
-
-            dialogue.append({"role": "system", "content": dynamic_part})
 
         # 第四段：实际对话历史（不含 few-shot）
         actual_messages = [m for m in non_system_messages if not m.is_temporary]

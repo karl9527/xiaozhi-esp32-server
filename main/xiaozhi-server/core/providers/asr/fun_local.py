@@ -59,7 +59,7 @@ class ASRProvider(ASRProviderBase):
                 model=self.model_dir,
                 vad_kwargs={"max_single_segment_time": 30000},
                 disable_update=True,
-                hub="hf",
+                hub="ms",
                 # device="cuda:0",  # 启用GPU加速
             )
 
@@ -84,9 +84,14 @@ class ASRProvider(ASRProviderBase):
                     use_itn=True,
                     batch_size_s=60,
                 )
-                text = lang_tag_filter(result[0]["text"])
+                # 兼容不同版本的 FunASR 返回值格式
+                raw_text = result[0]
+                if isinstance(raw_text, dict):
+                    raw_text = raw_text.get("text", "")
+                text = lang_tag_filter(raw_text)
+                content = text.get("content", text) if isinstance(text, dict) else text
                 logger.bind(tag=TAG).debug(
-                    f"语音识别耗时: {time.time() - start_time:.3f}s | 结果: {text['content']}"
+                    f"语音识别耗时: {time.time() - start_time:.3f}s | 结果: {content}"
                 )
 
                 return text, artifacts.file_path
